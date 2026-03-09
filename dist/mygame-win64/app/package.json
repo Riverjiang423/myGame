@@ -1,0 +1,26 @@
+{
+  "name": "mygame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "install": "node -e \"console.log('skip native build on install; run npm run build:libzt when needed')\"",
+    "build:libzt": "node-gyp rebuild",
+    "dist:prepare": "node scripts/prepare-distribution.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "node-addon-api": "^8.2.1",
+    "node-gyp": "^11.2.0",
+    "socket.io-client": "^4.8.3"
+  }
+}

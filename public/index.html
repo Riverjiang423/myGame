@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern Pastel Multiplayer UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg-soft: #f4f7f8;
+        --card: #ffffff;
+        --line: #dde7ea;
+        --text-main: #2f434a;
+        --text-muted: #73909a;
+        --mint: #8fdcc6;
+        --sky: #a9d8ff;
+        --coral: #ff9f96;
+        --lilac: #cbc9ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at 0% 0%, #eef8f5 0%, rgba(238, 248, 245, 0) 44%),
+          radial-gradient(circle at 100% 0%, #eef4ff 0%, rgba(238, 244, 255, 0) 36%),
+          radial-gradient(circle at 50% 100%, #fff0ee 0%, rgba(255, 240, 238, 0) 40%),
+          var(--bg-soft);
+        color: var(--text-main);
+        font-family: "Inter", "Noto Sans SC", "PingFang SC", "Segoe UI", sans-serif;
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .player-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: var(--text-main);
+      }
+
+      .player-dot {
+        width: 0.65rem;
+        height: 0.65rem;
+        border-radius: 999px;
+        flex: 0 0 auto;
+      }
+
+      .chat-line {
+        color: #587682;
+      }
+
+      .lobby-status {
+        border-radius: 1rem;
+        padding: 0.55rem 0.8rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      .lobby-status.info {
+        background: #eef7ff;
+        color: #4e7486;
+      }
+
+      .lobby-status.success {
+        background: #e9f9f3;
+        color: #3f7a6f;
+      }
+
+      .lobby-status.error {
+        background: #ffefed;
+        color: #9a5a53;
+      }
+
+      #chat-history {
+        scrollbar-width: thin;
+      }
+
+      #minesweeper-grid {
+        display: grid;
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+        gap: 0.55rem;
+        width: 100%;
+      }
+
+      .cell {
+        aspect-ratio: 1 / 1;
+        border-radius: 1rem;
+        background: linear-gradient(145deg, #f3fcff, #edf7fb);
+        border: 1px solid #dbeaf0;
+        box-shadow: 0 7px 18px rgba(129, 158, 172, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #42616f;
+        font-weight: 600;
+        user-select: none;
+      }
+
+      .cell.revealed {
+        background: #ffffff;
+      }
+
+      .cell.mine {
+        background: #ffeceb;
+        border-color: #ffd4d0;
+      }
+
+      .mine-icon {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 999px;
+        background: #ff9389;
+      }
+
+      .cell.flagged {
+        border-width: 2px;
+      }
+
+      .show {
+        display: flex !important;
+      }
+
+      .poker-table {
+        position: relative;
+        width: min(960px, 100%);
+        min-height: 540px;
+        border-radius: 999px;
+        background: radial-gradient(circle at center, #defff4 0%, #cbf7e8 60%, #bdeedc 100%);
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+          0 24px 50px rgba(93, 152, 137, 0.22);
+      }
+
+      .table-center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+      }
+
+      .community-cards {
+        display: flex;
+        gap: 0.6rem;
+        justify-content: center;
+      }
+
+      .playing-card {
+        width: 46px;
+        height: 66px;
+        border-radius: 0.95rem;
+        background: #ffffff;
+        border: 1px solid #e6eef1;
+        color: #405b66;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(120, 158, 170, 0.2);
+      }
+
+      .playing-card.red {
+        color: #f07c74;
+      }
+
+      .player-seat {
+        position: absolute;
+        width: 170px;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        box-shadow: 0 12px 28px rgba(92, 130, 144, 0.18);
+        padding: 0.75rem;
+      }
+
+      .seat-name {
+        font-size: 0.86rem;
+        color: #335260;
+        margin-bottom: 0.22rem;
+      }
+
+      .seat-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: #66828e;
+        margin-bottom: 0.35rem;
+      }
+
+      .seat-cards {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .card-back {
+        width: 30px;
+        height: 42px;
+        border-radius: 0.55rem;
+        background: linear-gradient(140deg, #d7e5eb, #c7d8e0);
+      }
+
+      .seat-top {
+        left: 50%;
+        top: 1rem;
+        transform: translateX(-50%);
+      }
+
+      .seat-left {
+        left: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .seat-right {
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .seat-bottom {
+        left: 50%;
+        bottom: 1rem;
+        transform: translateX(-50%);
+      }
+
+      .poker-action-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 1rem;
+        display: flex;
+        justify-content: center;
+        z-index: 20;
+      }
+
+      .poker-action-bar.hidden {
+        display: none;
+      }
+
+      .poker-action-bar.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .action-inner {
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 999px;
+        box-shadow: 0 16px 36px rgba(112, 144, 157, 0.2);
+        padding: 0.6rem;
+        display: flex;
+        gap: 0.55rem;
+      }
+
+      .action-btn {
+        border: none;
+        border-radius: 999px;
+        padding: 0.58rem 1rem;
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #314f5c;
+      }
+
+      .rules-panel.hidden {
+        display: none;
+      }
+
+      #action-fold {
+        background: #ffd7d2;
+      }
+
+      #action-check {
+        background: #d9f8ef;
+      }
+
+      #action-call {
+        background: #d9eefe;
+      }
+
+      #action-raise {
+        background: #e8e6ff;
+      }
+
+      #action-fold:hover,
+      #action-check:hover,
+      #action-call:hover,
+      #action-raise:hover {
+        filter: brightness(0.97);
+      }
+
+      @media (max-width: 860px) {
+        .poker-table {
+          min-height: 640px;
+          border-radius: 2.2rem;
+        }
+
+        .seat-top,
+        .seat-bottom {
+          left: 50%;
+          transform: translateX(-50%);
+        }
+
+        .seat-left,
+        .seat-right {
+          top: auto;
+          bottom: 5.8rem;
+          transform: none;
+        }
+
+        .seat-left {
+          left: 1rem;
+        }
+
+        .seat-right {
+          right: 1rem;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .lobby-status {
+          font-size: 0.78rem;
+        }
+
+        #minesweeper-grid-wrap {
+          padding-bottom: 0.25rem;
+        }
+
+        .cell {
+          border-radius: 0.75rem;
+          font-size: 0.82rem;
+        }
+
+        .poker-table {
+          min-height: 520px;
+          border-radius: 1.4rem;
+        }
+
+        .table-center {
+          width: 74%;
+        }
+
+        .community-cards {
+          gap: 0.35rem;
+          flex-wrap: wrap;
+        }
+
+        .playing-card {
+          width: 36px;
+          height: 52px;
+          border-radius: 0.7rem;
+          font-size: 0.72rem;
+        }
+
+        .player-seat {
+          width: 120px;
+          padding: 0.45rem;
+          border-radius: 0.8rem;
+        }
+
+        .seat-name {
+          font-size: 0.72rem;
+        }
+
+        .seat-meta {
+          font-size: 0.66rem;
+        }
+
+        .card-back {
+          width: 24px;
+          height: 34px;
+        }
+
+        .seat-top {
+          top: 0.55rem;
+        }
+
+        .seat-bottom {
+          bottom: 0.55rem;
+        }
+
+        .seat-left {
+          left: 0.4rem;
+          top: 58%;
+        }
+
+        .seat-right {
+          right: 0.4rem;
+          top: 58%;
+        }
+
+        .poker-action-bar {
+          bottom: 0.5rem;
+          padding: 0 0.5rem;
+        }
+
+        .action-inner {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          justify-content: flex-start;
+          padding: 0.5rem;
+          gap: 0.4rem;
+        }
+
+        .action-btn {
+          flex: 0 0 auto;
+          font-size: 0.78rem;
+          padding: 0.5rem 0.8rem;
+        }
+
+        #poker-rules-panel {
+          left: 0.75rem;
+          right: 0.75rem;
+          top: 4.6rem;
+          width: auto;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-[var(--text-main)]">
+    <div
+      id="system-toast"
+      class="pointer-events-none fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 text-sm font-semibold text-[#3f5f6c] shadow-xl ring-1 ring-[#dceaf0] backdrop-blur"
+    ></div>
+
+    <main class="mx-auto w-full max-w-6xl px-3 pb-32 pt-6 sm:px-4 sm:pt-8 md:px-8 md:pb-24 md:pt-10">
+      <div id="lobby-view" class="view active">
+        <div class="mx-auto max-w-2xl">
+          <section class="rounded-2xl bg-white p-5 shadow-xl ring-1 ring-[#edf2f4] sm:p-7">
+            <h1 class="mb-5 text-xl font-semibold sm:text-2xl">游戏大厅</h1>
+            <div id="lobby-status" class="lobby-status info">请输入昵称后加入房间</div>
+            <div id="default-share-panel" class="mt-3 rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3 text-sm text-[var(--text-muted)]">
+              <div class="mb-1 font-semibold text-[#4f6b79]">默认联机房间</div>
+              <div class="mb-1">
+                房间号: <strong id="default-room-code" class="font-semibold text-[var(--text-main)]">加载中...</strong>
+              </div>
+              <div class="mb-1 break-all">
+                推荐链接: <code id="default-share-url" class="rounded bg-[#f1f7fa] px-2 py-1 text-[11px] text-[#385463]">加载中...</code>
+              </div>
+              <div class="mb-2 text-xs text-[#5f7b88]">
+                推荐原因: <span id="default-share-reason">正在获取...</span>
+              </div>
+              <button id="default-share-copy-btn" type="button" class="rounded-xl bg-[#eef7ff] px-3 py-1.5 text-xs font-semibold text-[#47697d] shadow-sm transition hover:brightness-95">
+                复制分享链接
+              </button>
+            </div>
+
+            <div id="lobby-prejoin" class="mt-4 space-y-3">
+              <input id="player-name-input" class="w-full rounded-2xl border border-[#dceaf0] bg-white px-4 py-3 text-sm text-[var(--text-main)] outline-none placeholder:text-[#9ab0ba] focus:border-[#a9d8ff]" type="text" placeholder="输入昵称" />
+              <input id="room-id-input" class="w-full rounded-2xl border border-[#dceaf0] bg-white px-4 py-3 text-sm text-[var(--text-main)] outline-none placeholder:text-[#9ab0ba] focus:border-[#8fdcc6]" type="text" placeholder="输入房间号（留空自动创建）" />
+              <button id="join-btn" type="button" class="w-full rounded-2xl bg-[#ffefe8] px-5 py-2.5 text-sm font-semibold text-[#805549] shadow-xl transition hover:brightness-95 sm:w-auto">加入房间</button>
+            </div>
+
+            <div id="lobby-postjoin" class="mt-4 hidden space-y-4">
+              <div class="rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3 text-sm text-[var(--text-muted)]">
+                我的身份: <strong id="room-role" class="font-semibold text-[var(--text-main)]">玩家</strong>
+              </div>
+              <div class="rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3 text-sm text-[var(--text-muted)]">
+                当前房间号: <strong id="room-code" class="font-semibold text-[var(--text-main)]">----</strong>
+              </div>
+              <div class="rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3 text-sm text-[var(--text-muted)]">
+                本人昵称: <strong id="my-nickname" class="font-semibold text-[var(--text-main)]">----</strong>
+              </div>
+              <div class="rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3 text-sm text-[var(--text-muted)]">
+                房主已选游戏: <strong id="selected-game-label" class="font-semibold text-[var(--text-main)]">未选择</strong>
+              </div>
+              <div id="share-addresses-panel" class="rounded-2xl border border-[#e6f0f3] bg-[#f7fbfd] px-4 py-3">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-sm font-semibold text-[#4f6b79]">联机分享地址（自动带房间号）</div>
+                  <button
+                    id="share-simple-toggle"
+                    type="button"
+                    class="rounded-xl bg-[#eef7ff] px-3 py-1.5 text-xs font-semibold text-[#47697d] shadow-sm transition hover:brightness-95"
+                  >
+                    简洁模式：关
+                  </button>
+                </div>
+                <div id="share-address-list" class="space-y-2 text-xs text-[#5f7b88]">
+                  <div>正在获取可分享地址...</div>
+                </div>
+              </div>
+              <div>
+                <p class="mb-2 text-sm font-semibold text-[var(--text-muted)]">可选游戏列表</p>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button id="start-btn" type="button" class="w-full rounded-2xl bg-[#8fdcc6] px-5 py-2.5 text-sm font-semibold text-[#26484a] shadow-xl transition hover:brightness-95 sm:w-auto">选择扫雷</button>
+                  <button id="poker-btn" type="button" class="w-full rounded-2xl bg-[#a9d8ff] px-5 py-2.5 text-sm font-semibold text-[#27495f] shadow-xl transition hover:brightness-95 sm:w-auto">选择德州</button>
+                  <button id="room-ready-btn" type="button" class="w-full rounded-2xl bg-[#d9f8ef] px-5 py-2.5 text-sm font-semibold text-[#3e7a70] shadow-xl transition hover:brightness-95 sm:w-auto">准备</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden">
+              <ul id="player-list"></ul>
+              <div id="chat-history"></div>
+              <input id="chat-input" type="text" />
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="game-view" class="view">
+        <section class="mx-auto max-w-5xl rounded-2xl bg-white p-4 shadow-xl ring-1 ring-[#edf2f4] sm:p-6 md:p-8">
+          <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <button id="back-btn" type="button" class="rounded-2xl bg-[#ecf4f7] px-4 py-2 text-sm font-semibold text-[#4c6b77]">离开房间</button>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <button id="game-room-start-btn" type="button" class="hidden rounded-2xl bg-[#ffe7cf] px-4 py-2 text-sm font-semibold text-[#8a6035] shadow-md transition hover:brightness-95">开始游戏</button>
+              <div class="inline-flex max-w-full items-center rounded-full bg-[#eef7ff] px-4 py-2 text-sm font-semibold text-[#47616e] shadow-xl sm:px-5">
+                <span id="status-text">状态：游戏进行中</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 flex flex-wrap items-center gap-3">
+            <select id="minesweeper-difficulty" class="w-full rounded-2xl border border-[#dceaf0] bg-white px-3 py-2 text-sm text-[var(--text-main)] outline-none sm:w-auto">
+              <option value="beginner">初级 (9x9, 10雷)</option>
+              <option value="intermediate">中级 (16x16, 40雷)</option>
+              <option value="advanced">高级 (30x16, 99雷)</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div id="custom-config" class="hidden items-center gap-2">
+              <input id="custom-width" class="w-20 rounded-xl border border-[#dceaf0] bg-white px-3 py-2 text-sm" type="number" min="5" max="50" value="10" placeholder="宽" />
+              <input id="custom-height" class="w-20 rounded-xl border border-[#dceaf0] bg-white px-3 py-2 text-sm" type="number" min="5" max="30" value="10" placeholder="高" />
+              <input id="custom-mines" class="w-24 rounded-xl border border-[#dceaf0] bg-white px-3 py-2 text-sm" type="number" min="1" value="15" placeholder="雷" />
+            </div>
+          </div>
+
+          <div id="minesweeper-post-actions" class="mb-4 hidden flex flex-wrap items-center gap-2">
+            <button id="minesweeper-restart-btn" type="button" class="rounded-2xl bg-[#d9f8ef] px-4 py-2 text-sm font-semibold text-[#3e7a70] shadow-md transition hover:brightness-95">重新开始</button>
+            <button id="minesweeper-new-round-btn" type="button" class="rounded-2xl bg-[#ffe7cf] px-4 py-2 text-sm font-semibold text-[#8a6035] shadow-md transition hover:brightness-95">新的一局</button>
+            <button id="minesweeper-leave-btn" type="button" class="hidden rounded-2xl bg-[#ecf4f7] px-4 py-2 text-sm font-semibold text-[#4c6b77] shadow-md transition hover:brightness-95">离开房间</button>
+          </div>
+
+          <div class="rounded-2xl bg-[#f5fbfd] p-4 ring-1 ring-[#e4eef2] md:p-6">
+            <div id="minesweeper-grid-wrap" class="mx-auto w-full max-w-5xl overflow-x-auto">
+              <div id="minesweeper-grid" class="mx-auto">
+                <div class="cell"></div>
+                <div class="cell revealed">1</div>
+                <div class="cell flagged">F</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="poker-view" class="view">
+        <section class="mx-auto max-w-6xl rounded-2xl bg-white p-3 shadow-xl ring-1 ring-[#edf2f4] sm:p-4 md:p-6">
+          <button
+            id="poker-rules-toggle"
+            type="button"
+            class="hidden rounded-2xl bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#4f7084] shadow-md transition hover:brightness-95 sm:text-sm"
+          >
+            游戏规则
+          </button>
+
+          <aside
+            id="poker-rules-panel"
+            class="rules-panel hidden fixed right-4 top-20 z-40 w-[22rem] rounded-2xl border border-[#dceaf0] bg-white p-4 shadow-xl"
+          >
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-base font-semibold text-[#2f434a]">德州扑克规则</h3>
+              <button id="poker-rules-close" type="button" class="rounded-xl bg-[#f3f7fa] px-2 py-1 text-xs text-[#5f7b88]">关闭</button>
+            </div>
+            <div class="space-y-2 text-sm leading-6 text-[#4f6874]">
+              <p>1. 每位玩家发两张底牌，桌面会发 5 张公共牌。</p>
+              <p>2. 你可使用任意 5 张牌（底牌+公共牌）组成最大牌型。</p>
+              <p>3. 操作顺序：弃牌 / 过牌 / 跟注 / 加注。</p>
+              <p>4. 轮到你时底部操作区会激活，非你回合时按钮会隐藏。</p>
+              <p>5. 常见牌型从高到低：同花顺、四条、葫芦、同花、顺子、三条、两对、一对、高牌。</p>
+            </div>
+          </aside>
+
+          <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <button id="poker-back-btn" type="button" class="rounded-2xl bg-[#ecf4f7] px-4 py-2 text-sm font-semibold text-[#4c6b77]">离开房间</button>
+            <div class="flex items-center gap-2">
+              <button id="poker-room-start-btn" type="button" class="hidden rounded-2xl bg-[#ffe7cf] px-4 py-2 text-sm font-semibold text-[#8a6035] shadow-md transition hover:brightness-95">开始游戏</button>
+              <button id="poker-ready-btn" type="button" class="hidden rounded-2xl bg-[#d9f8ef] px-4 py-2 text-sm font-semibold text-[#3e7a70] shadow-md transition hover:brightness-95">准备</button>
+              <button
+                id="poker-rules-toggle-inline"
+                type="button"
+                class="rounded-2xl bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#4f7084] shadow-md transition hover:brightness-95 sm:text-sm"
+              >
+                游戏规则
+              </button>
+              <div id="turn-indicator" class="rounded-full bg-[#f1faf6] px-4 py-1.5 text-sm font-medium text-[#50706c]">等待牌局开始</div>
+            </div>
+          </div>
+          <div id="poker-bet-limit-controls" class="mb-4 hidden flex flex-wrap items-center gap-2 rounded-2xl border border-[#e6edf1] bg-[#f8fcff] p-3">
+            <span class="text-sm font-semibold text-[#4a6673]">押注限制</span>
+            <input id="poker-min-bet" type="number" min="1" step="1" placeholder="最小值（留空不限）" class="w-44 rounded-xl border border-[#dceaf0] bg-white px-3 py-2 text-sm text-[#36525f]" />
+            <input id="poker-max-bet" type="number" min="1" step="1" placeholder="最大值（留空不限）" class="w-44 rounded-xl border border-[#dceaf0] bg-white px-3 py-2 text-sm text-[#36525f]" />
+            <button id="poker-limit-apply-btn" type="button" class="rounded-2xl bg-[#e5f5ff] px-4 py-2 text-sm font-semibold text-[#36596a] shadow-md transition hover:brightness-95">保存限制</button>
+          </div>
+          <div id="poker-bet-limit-status" class="mb-2 rounded-full bg-[#f2f8fb] px-4 py-2 text-sm text-[#4f6b79]">押注限制：不限</div>
+          <div id="poker-showdown" class="mb-4 hidden rounded-2xl border border-[#e6edf1] bg-[#f8fcff] p-3 text-sm text-[#496470]"></div>
+
+          <div class="flex justify-center">
+            <div class="poker-table p-3 sm:p-6 md:p-10">
+              <div class="table-center">
+                <p class="mb-2 text-sm font-medium text-[#577581]">Pot: <span id="pot-amount">0</span></p>
+                <div id="community-cards" class="community-cards"></div>
+              </div>
+              <div id="poker-seats"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div id="poker-action-bar" class="poker-action-bar hidden">
+      <div class="action-inner">
+        <button id="action-fold" class="action-btn" type="button">弃牌</button>
+        <button id="action-check" class="action-btn" type="button">过牌</button>
+        <button id="action-call" class="action-btn" type="button">跟注</button>
+        <button id="action-raise" class="action-btn" type="button">加注</button>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const pokerRulesToggle = document.getElementById('poker-rules-toggle');
+        const pokerRulesToggleInline = document.getElementById('poker-rules-toggle-inline');
+        const pokerRulesClose = document.getElementById('poker-rules-close');
+        const pokerRulesPanel = document.getElementById('poker-rules-panel');
+
+        const toggleRulesPanel = () => {
+          if (!pokerRulesPanel) return;
+          pokerRulesPanel.classList.toggle('hidden');
+        };
+
+        if (pokerRulesToggle && pokerRulesPanel) {
+          pokerRulesToggle.addEventListener('click', () => {
+            toggleRulesPanel();
+          });
+        }
+
+        if (pokerRulesToggleInline && pokerRulesPanel) {
+          pokerRulesToggleInline.addEventListener('click', () => {
+            pokerRulesPanel.classList.toggle('hidden');
+          });
+        }
+
+        if (pokerRulesClose && pokerRulesPanel) {
+          pokerRulesClose.addEventListener('click', () => {
+            pokerRulesPanel.classList.add('hidden');
+          });
+        }
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && pokerRulesPanel) {
+            pokerRulesPanel.classList.add('hidden');
+          }
+        });
+      })();
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+  </body>
+</html>

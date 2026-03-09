@@ -1,0 +1,23 @@
+{
+  "name": "mygame-win64",
+  "entry": "index.js",
+  "platform": "windows-x64",
+  "distributionMode": true,
+  "defaultStartMode": "online-preferred",
+  "autoOpenBrowser": true,
+  "requiredRuntimeFiles": [
+    "index.js",
+    "src/**",
+    "public/**",
+    "package.json",
+    "runtime/node.exe"
+  ],
+  "runtimeSources": {
+    "env": "NODE_RUNTIME_WIN_X64_DIR",
+    "default": "third_party/node/winx64"
+  },
+  "nativeFiles": [
+    "build/Release/libztaddon.node",
+    "third_party/libzt/winx64/libzt.dll"
+  ]
+}
