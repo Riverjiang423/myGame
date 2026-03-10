@@ -42,9 +42,17 @@ async function startLibztRuntime() {
     throw new Error(`zts_node_start failed: ${startRc}`);
   }
 
+  let nodeId = '';
+  try {
+    nodeId = libzt.nodeGetId().toString();
+  } catch (error) {
+    nodeId = '';
+  }
+
   const joinRc = libzt.netJoin(networkId);
   if (joinRc !== 0) {
-    throw new Error(`zts_net_join failed: ${joinRc}`);
+    const nodeHint = nodeId ? ` (nodeId=${nodeId})` : '';
+    throw new Error(`zts_net_join failed: ${joinRc}${nodeHint}`);
   }
 
   const waitMs = libztConfig.waitMs;
@@ -86,7 +94,7 @@ async function startLibztRuntime() {
         networkId,
         networkIdSource: libztConfig.networkIdSource,
         networkIdMasked: libztConfig.networkIdMasked,
-        nodeId: libzt.nodeGetId().toString(),
+        nodeId: nodeId || libzt.nodeGetId().toString(),
         proxy
       };
       return runtime;
@@ -94,7 +102,8 @@ async function startLibztRuntime() {
     await sleep(800);
   }
 
-  throw new Error(`ZeroTier transport not ready within ${waitMs}ms`);
+  const nodeHint = nodeId ? ` (nodeId=${nodeId})` : '';
+  throw new Error(`ZeroTier transport not ready within ${waitMs}ms${nodeHint}`);
 }
 
 async function stopLibztRuntime() {

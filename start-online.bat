@@ -35,7 +35,17 @@ if errorlevel 1 (
 )
 
 echo Ensuring ZeroTier network membership: %ZT_NETWORK_ID%
-call %ZTCLI% join %ZT_NETWORK_ID% >nul 2>nul
+call %ZTCLI% join %ZT_NETWORK_ID%
+if errorlevel 1 (
+  echo.
+  echo Failed to join ZeroTier network: %ZT_NETWORK_ID%
+  echo Please check:
+  echo   - ZeroTier service is running
+  echo   - Network ID is correct
+  echo   - Current network allows ZeroTier traffic
+  pause
+  exit /b 1
+)
 
 echo.
 echo Current ZeroTier networks:
@@ -49,6 +59,12 @@ set "PORT=%APP_PORT%"
 set "HOST=%APP_HOST%"
 
 call start.bat
+set "APP_EXIT_CODE=%ERRORLEVEL%"
+if not "%APP_EXIT_CODE%"=="0" (
+  echo.
+  echo App exited with error code %APP_EXIT_CODE%.
+  pause
+)
 
 endlocal
-exit /b 0
+exit /b %APP_EXIT_CODE%
