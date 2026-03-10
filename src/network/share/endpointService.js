@@ -10,6 +10,20 @@ function toPositiveInt(value, fallback) {
   return n;
 }
 
+function isIPv4Address(value) {
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const parts = value.trim().split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  return parts.every((part) => {
+    const n = Number(part);
+    return Number.isInteger(n) && n >= 0 && n <= 255;
+  });
+}
+
 function parseHostHeader(hostHeader) {
   const fallback = {
     hostname: null,
@@ -177,10 +191,15 @@ function getShareEndpoints(input) {
 
   if (parsedHost.hostname && parsedHost.hostname !== '0.0.0.0' && parsedHost.hostname !== '::') {
     const matchedInterface = collectedAddresses.find((item) => item.host === parsedHost.hostname) || null;
-    const currentType = matchedInterface ? matchedInterface.type : 'current';
+    const embeddedLikelyZeroTierHost = !matchedInterface
+      && embeddedProxyPort
+      && isIPv4Address(parsedHost.hostname);
+    const currentType = matchedInterface
+      ? matchedInterface.type
+      : (embeddedLikelyZeroTierHost ? 'zerotier' : 'current');
     const currentLabel = matchedInterface
       ? `当前访问地址（${matchedInterface.type === 'zerotier' ? 'ZeroTier' : 'LAN'}）`
-      : '当前访问地址';
+      : (embeddedLikelyZeroTierHost ? '当前访问地址（ZeroTier）' : '当前访问地址');
     pushEndpoint(currentType, currentLabel, parsedHost.hostname, matchedInterface ? matchedInterface.interface : null);
   }
 
