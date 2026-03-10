@@ -35,6 +35,7 @@ async function startLibztRuntime() {
   }
 
   const dllPath = libztConfig.dllPath;
+  const storagePath = libztConfig.storagePath;
   const networkId = libztConfig.networkId;
   if (!networkId) {
     throw new Error('LIBZT_NETWORK_ID is required when LIBZT_ENABLE=1');
@@ -49,6 +50,17 @@ async function startLibztRuntime() {
     throw new Error(
       `Failed to load libzt native addon. Build it first with "npm run build:libzt". ${error.message}`
     );
+  }
+
+  try {
+    fs.mkdirSync(storagePath, { recursive: true });
+  } catch (error) {
+    throw new Error(`Failed to create libzt storage path: ${storagePath}. ${error.message}`);
+  }
+
+  const initStorageRc = libzt.initFromStorage(storagePath);
+  if (initStorageRc !== 0) {
+    throw new Error(`zts_init_from_storage failed: ${initStorageRc} (path=${storagePath})`);
   }
 
   const startRc = libzt.nodeStart();
@@ -128,6 +140,7 @@ async function startLibztRuntime() {
         networkId,
         networkIdSource: libztConfig.networkIdSource,
         networkIdMasked: libztConfig.networkIdMasked,
+        storagePath,
         nodeId: nodeId || libzt.nodeGetId().toString(),
         proxy
       };

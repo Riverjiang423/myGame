@@ -29,6 +29,14 @@ function nodeStart() {
   return getAddon().nodeStart();
 }
 
+function initFromStorage(storagePath) {
+  const addon = getAddon();
+  if (typeof addon.initFromStorage !== 'function') {
+    throw new Error('libzt addon missing initFromStorage(). Please rebuild native addon.');
+  }
+  return addon.initFromStorage(storagePath);
+}
+
 function nodeStop() {
   return getAddon().nodeStop();
 }
@@ -57,6 +65,7 @@ module.exports = {
   load,
   loaded,
   unload,
+  initFromStorage,
   nodeStart,
   nodeStop,
   netJoin,
