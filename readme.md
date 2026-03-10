@@ -287,6 +287,19 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 
 ## 8. 本地运行与联机（当前）
 
+### 8.0 “拉取即用”边界对照表
+
+| 使用路径 | 是否“拉取后直接可用” | 额外前置条件 | 适合人群 |
+| --- | --- | --- | --- |
+| 源码仓库 + `start.bat` | 条件可用 | 需要本机已安装 Node.js / npm（首次会自动装依赖） | 开发者、本地调试 |
+| 源码仓库 + `start-online.bat` | 条件可用 | 需要安装 ZeroTier 客户端；建议管理员权限运行脚本 | 需要外部 ZeroTier 客户端联机的用户 |
+| 源码仓库 + `start-embedded.bat` | 不属于“即拉即用” | 需要 C++ Build Tools（node-gyp 编译）；需 `libzt.dll`；首次需 ZeroTier Central 授权节点 | 进阶用户、开发测试嵌入式联机 |
+| 分发目录 `dist/mygame-win64/launch-product.bat` | 最接近“开箱即用” | 先由发布方执行 `npm run dist:prepare` 产出分发包；用户端无需预装 Node | 普通终端用户 |
+
+说明：
+- GitHub 源码仓库定位是“开发仓库”，不是最终用户一键安装包。
+- 面向普通用户请优先分发 `dist/mygame-win64`，而不是直接让用户拉源码运行。
+
 ### 8.1 首次安装依赖
 
 双击：
