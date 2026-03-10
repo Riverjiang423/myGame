@@ -86,6 +86,7 @@ function main() {
     'index.js',
     'src',
     'public',
+    'node_modules',
     'package.json',
     'package-lock.json',
     'binding.gyp',

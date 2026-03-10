@@ -108,6 +108,12 @@ function checkDistFiles() {
   if (missing.length > 0) {
     fail(`Missing required dist files: ${missing.join(', ')}`);
   }
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const prodDeps = Object.keys(pkg.dependencies || {});
+  const missingProdDeps = prodDeps.filter((dep) => !exists(path.join('dist', 'mygame-win64', 'app', 'node_modules', dep)));
+  if (missingProdDeps.length > 0) {
+    fail(`Missing dist production dependencies: ${missingProdDeps.join(', ')}`);
+  }
   info('dist structure and launcher/runtime files exist');
 }
 

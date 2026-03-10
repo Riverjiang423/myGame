@@ -2,7 +2,7 @@ const path = require('path');
 const { readStringEnv, readIntEnv, readBoolEnv } = require('./env');
 const { appConfig } = require('./app');
 
-const DEFAULT_NETWORK_ID = '3b19b3a716018ef3';
+const DEFAULT_NETWORK_ID = '154a350c867ce6c8';
 const rawDllPath = readStringEnv('LIBZT_DLL_PATH', '');
 const rawStoragePath = readStringEnv('LIBZT_STORAGE_PATH', '');
 const allowIpsRaw = readStringEnv('LIBZT_PROXY_ALLOW_IPS', '');

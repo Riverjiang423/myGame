@@ -5,7 +5,7 @@ rem 2) Fill your ZeroTier network id below
 
 set LIBZT_ENABLE=1
 set LIBZT_STRICT=1
-set LIBZT_NETWORK_ID=3b19b3a716018ef3
+set LIBZT_NETWORK_ID=154a350c867ce6c8
 set LIBZT_DLL_PATH=third_party\libzt\winx64\libzt.dll
 set LIBZT_WAIT_MS=30000
 set LIBZT_TCP_PROXY_ENABLE=1
