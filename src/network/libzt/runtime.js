@@ -6,6 +6,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const INVALID_NODE_IDS = new Set([
+  '0',
+  '18446744073709551615',
+  '18446744073709551614'
+]);
+
+function isNodeIdReady(nodeId) {
+  const value = String(nodeId || '').trim();
+  if (!value) {
+    return false;
+  }
+  return !INVALID_NODE_IDS.has(value);
+}
+
 let runtime = null;
 
 async function startLibztRuntime() {
@@ -49,15 +63,35 @@ async function startLibztRuntime() {
     nodeId = '';
   }
 
-  const joinRc = libzt.netJoin(networkId);
+  const waitMs = libztConfig.waitMs;
+  const joinDeadline = Date.now() + waitMs;
+  let joinRc = -1;
+  while (Date.now() < joinDeadline) {
+    if (!isNodeIdReady(nodeId)) {
+      try {
+        nodeId = libzt.nodeGetId().toString();
+      } catch (error) {
+        nodeId = '';
+      }
+      await sleep(300);
+      continue;
+    }
+
+    joinRc = libzt.netJoin(networkId);
+    if (joinRc === 0) {
+      break;
+    }
+
+    await sleep(800);
+  }
+
   if (joinRc !== 0) {
     const nodeHint = nodeId ? ` (nodeId=${nodeId})` : '';
     throw new Error(`zts_net_join failed: ${joinRc}${nodeHint}`);
   }
 
-  const waitMs = libztConfig.waitMs;
-  const begin = Date.now();
-  while (Date.now() - begin < waitMs) {
+  const readyDeadline = Date.now() + waitMs;
+  while (Date.now() < readyDeadline) {
     if (libzt.netTransportIsReady(networkId)) {
       const proxyEnabled = libztConfig.proxy.enabled;
       let proxy = null;
