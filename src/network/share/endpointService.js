@@ -24,6 +24,14 @@ function isIPv4Address(value) {
   });
 }
 
+function isLikelyZeroTierIPv4(host) {
+  if (!isIPv4Address(host)) {
+    return false;
+  }
+  // ZeroTier managed routes commonly use 10.x.x.x in this project setup.
+  return String(host).trim().startsWith('10.');
+}
+
 function parseHostHeader(hostHeader) {
   const fallback = {
     hostname: null,
@@ -191,15 +199,18 @@ function getShareEndpoints(input) {
 
   if (parsedHost.hostname && parsedHost.hostname !== '0.0.0.0' && parsedHost.hostname !== '::') {
     const matchedInterface = collectedAddresses.find((item) => item.host === parsedHost.hostname) || null;
+    const currentHostLooksZeroTier = isLikelyZeroTierIPv4(parsedHost.hostname);
     const embeddedLikelyZeroTierHost = !matchedInterface
       && embeddedProxyPort
       && isIPv4Address(parsedHost.hostname);
+    const genericLikelyZeroTierHost = !matchedInterface
+      && currentHostLooksZeroTier;
     const currentType = matchedInterface
       ? matchedInterface.type
-      : (embeddedLikelyZeroTierHost ? 'zerotier' : 'current');
+      : ((embeddedLikelyZeroTierHost || genericLikelyZeroTierHost) ? 'zerotier' : 'current');
     const currentLabel = matchedInterface
       ? `当前访问地址（${matchedInterface.type === 'zerotier' ? 'ZeroTier' : 'LAN'}）`
-      : (embeddedLikelyZeroTierHost ? '当前访问地址（ZeroTier）' : '当前访问地址');
+      : ((embeddedLikelyZeroTierHost || genericLikelyZeroTierHost) ? '当前访问地址（ZeroTier）' : '当前访问地址');
     pushEndpoint(currentType, currentLabel, parsedHost.hostname, matchedInterface ? matchedInterface.interface : null);
   }
 
