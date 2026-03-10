@@ -67,8 +67,11 @@ if not "%APP_PORT%"=="%BASE_PORT%" (
 set "PORT=%APP_PORT%"
 
 call npm.cmd run dev
+set "APP_EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 echo App process exited.
+if not "%APP_EXIT_CODE%"=="0" if "%START_BAT_SKIP_PAUSE_ON_ERROR%"=="1" goto :exit_now
 pause
-exit /b 0
+:exit_now
+exit /b %APP_EXIT_CODE%
