@@ -35,11 +35,11 @@ if errorlevel 1 (
 )
 
 echo Ensuring ZeroTier network membership: %ZT_NETWORK_ID%
-%ZTCLI% join %ZT_NETWORK_ID% >nul 2>nul
+call %ZTCLI% join %ZT_NETWORK_ID% >nul 2>nul
 
 echo.
 echo Current ZeroTier networks:
-%ZTCLI% listnetworks
+call %ZTCLI% listnetworks
 echo.
 echo Starting app...
 
