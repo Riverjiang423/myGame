@@ -1,6 +1,10 @@
 @echo off
 setlocal EnableDelayedExpansion
 set "DIST_ROOT=%~dp0"
+set "APP_ROOT=%DIST_ROOT%app"
+set "LOG_DIR=%DIST_ROOT%logs"
+set "LOG_FILE=%LOG_DIR%\app.log"
+set "SERVER_BAT=%DIST_ROOT%run-product-server.bat"
 set "NODE_EXE=%DIST_ROOT%runtime\node.exe"
 if not exist "%NODE_EXE%" (
   echo Node runtime not found: %NODE_EXE%
@@ -9,7 +13,19 @@ if not exist "%NODE_EXE%" (
   pause
   exit /b 1
 )
-cd /d "%DIST_ROOT%app"
+if not exist "%SERVER_BAT%" (
+  echo Server launcher not found: %SERVER_BAT%
+  pause
+  exit /b 1
+)
+if not exist "%APP_ROOT%\index.js" (
+  echo App entry not found: %APP_ROOT%\index.js
+  pause
+  exit /b 1
+)
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+> "%LOG_FILE%" type nul
+cd /d "%APP_ROOT%"
 if "%PORT%"=="" (
   set "BASE_PORT=3000"
 ) else (
@@ -40,14 +56,25 @@ if not "%APP_PORT%"=="%BASE_PORT%" (
 ) else (
   echo Starting app on port %APP_PORT%...
 )
-set "PORT=%APP_PORT%"
-set APP_DISTRIBUTION_MODE=1
-set APP_START_MODE=online-preferred
-set AUTO_OPEN_BROWSER=1
-"%NODE_EXE%" index.js
+set "APP_URL=http://127.0.0.1:%APP_PORT%/"
+echo Launching background service...
+start "myGame Server" /min "%SERVER_BAT%" %APP_PORT%
+echo Waiting for service to become ready...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddSeconds(70); $url='http://127.0.0.1:%APP_PORT%/api/ping'; while((Get-Date) -lt $deadline){ try { $response=Invoke-WebRequest -UseBasicParsing $url -TimeoutSec 2; if($response.StatusCode -ge 200 -and $response.StatusCode -lt 500){ exit 0 } } catch {}; Start-Sleep -Milliseconds 500 }; exit 1"
 if errorlevel 1 (
   echo.
-  echo App exited with error.
+  echo App did not become ready in time.
+  echo Log file: %LOG_FILE%
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path '%LOG_FILE%') { Get-Content '%LOG_FILE%' -Tail 30 }"
   pause
+  exit /b 1
 )
+echo Opening browser...
+start "" "%APP_URL%"
+echo.
+echo App is running at: %APP_URL%
+echo If the browser did not open automatically, open that address manually.
+echo Log file: %LOG_FILE%
+echo.
+pause
 endlocal

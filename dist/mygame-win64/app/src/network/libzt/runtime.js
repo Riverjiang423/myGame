@@ -6,6 +6,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const INVALID_NODE_IDS = new Set([
+  '0',
+  '18446744073709551615',
+  '18446744073709551614'
+]);
+
+function isNodeIdReady(nodeId) {
+  const value = String(nodeId || '').trim();
+  if (!value) {
+    return false;
+  }
+  return !INVALID_NODE_IDS.has(value);
+}
+
 let runtime = null;
 
 async function startLibztRuntime() {
@@ -21,6 +35,7 @@ async function startLibztRuntime() {
   }
 
   const dllPath = libztConfig.dllPath;
+  const storagePath = libztConfig.storagePath;
   const networkId = libztConfig.networkId;
   if (!networkId) {
     throw new Error('LIBZT_NETWORK_ID is required when LIBZT_ENABLE=1');
@@ -37,19 +52,58 @@ async function startLibztRuntime() {
     );
   }
 
+  try {
+    fs.mkdirSync(storagePath, { recursive: true });
+  } catch (error) {
+    throw new Error(`Failed to create libzt storage path: ${storagePath}. ${error.message}`);
+  }
+
+  const initStorageRc = libzt.initFromStorage(storagePath);
+  if (initStorageRc !== 0) {
+    throw new Error(`zts_init_from_storage failed: ${initStorageRc} (path=${storagePath})`);
+  }
+
   const startRc = libzt.nodeStart();
   if (startRc !== 0) {
     throw new Error(`zts_node_start failed: ${startRc}`);
   }
 
-  const joinRc = libzt.netJoin(networkId);
-  if (joinRc !== 0) {
-    throw new Error(`zts_net_join failed: ${joinRc}`);
+  let nodeId = '';
+  try {
+    nodeId = libzt.nodeGetId().toString();
+  } catch (error) {
+    nodeId = '';
   }
 
   const waitMs = libztConfig.waitMs;
-  const begin = Date.now();
-  while (Date.now() - begin < waitMs) {
+  const joinDeadline = Date.now() + waitMs;
+  let joinRc = -1;
+  while (Date.now() < joinDeadline) {
+    if (!isNodeIdReady(nodeId)) {
+      try {
+        nodeId = libzt.nodeGetId().toString();
+      } catch (error) {
+        nodeId = '';
+      }
+      await sleep(300);
+      continue;
+    }
+
+    joinRc = libzt.netJoin(networkId);
+    if (joinRc === 0) {
+      break;
+    }
+
+    await sleep(800);
+  }
+
+  if (joinRc !== 0) {
+    const nodeHint = nodeId ? ` (nodeId=${nodeId})` : '';
+    throw new Error(`zts_net_join failed: ${joinRc}${nodeHint}`);
+  }
+
+  const readyDeadline = Date.now() + waitMs;
+  while (Date.now() < readyDeadline) {
     if (libzt.netTransportIsReady(networkId)) {
       const proxyEnabled = libztConfig.proxy.enabled;
       let proxy = null;
@@ -86,7 +140,8 @@ async function startLibztRuntime() {
         networkId,
         networkIdSource: libztConfig.networkIdSource,
         networkIdMasked: libztConfig.networkIdMasked,
-        nodeId: libzt.nodeGetId().toString(),
+        storagePath,
+        nodeId: nodeId || libzt.nodeGetId().toString(),
         proxy
       };
       return runtime;
@@ -94,7 +149,8 @@ async function startLibztRuntime() {
     await sleep(800);
   }
 
-  throw new Error(`ZeroTier transport not ready within ${waitMs}ms`);
+  const nodeHint = nodeId ? ` (nodeId=${nodeId})` : '';
+  throw new Error(`ZeroTier transport not ready within ${waitMs}ms${nodeHint}`);
 }
 
 async function stopLibztRuntime() {

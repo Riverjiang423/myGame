@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-10T01:19:27.173Z",
+  "generatedAt": "2026-03-10T12:13:23.549Z",
   "entry": "app/index.js",
   "runtimeEntry": "runtime/node.exe",
   "distributionRoot": "dist/mygame-win64",
@@ -12,6 +12,7 @@
     "index.js",
     "src",
     "public",
+    "node_modules",
     "package.json",
     "package-lock.json",
     "binding.gyp",

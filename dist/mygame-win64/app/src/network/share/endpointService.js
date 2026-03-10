@@ -1,5 +1,6 @@
 const os = require('os');
 const { appConfig } = require('../../config/app');
+const { getLibztState } = require('../libzt/runtime');
 
 function toPositiveInt(value, fallback) {
   const n = Number(value);
@@ -7,6 +8,28 @@ function toPositiveInt(value, fallback) {
     return fallback;
   }
   return n;
+}
+
+function isIPv4Address(value) {
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const parts = value.trim().split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  return parts.every((part) => {
+    const n = Number(part);
+    return Number.isInteger(n) && n >= 0 && n <= 255;
+  });
+}
+
+function isLikelyZeroTierIPv4(host) {
+  if (!isIPv4Address(host)) {
+    return false;
+  }
+  // ZeroTier managed routes commonly use 10.x.x.x in this project setup.
+  return String(host).trim().startsWith('10.');
 }
 
 function parseHostHeader(hostHeader) {
@@ -76,13 +99,15 @@ function buildRoomShareUrl(baseUrl, roomId) {
 function collectNetworkAddresses() {
   const addresses = [];
   const interfaces = os.networkInterfaces();
+  const isZeroTierInterface = (ifaceName) => /^zt/i.test(ifaceName) || /zerotier/i.test(ifaceName);
+
   Object.keys(interfaces).forEach((ifaceName) => {
     const ifaceList = interfaces[ifaceName] || [];
     ifaceList.forEach((iface) => {
       if (!iface || iface.internal || iface.family !== 'IPv4') {
         return;
       }
-      const type = /^zt/i.test(ifaceName) ? 'zerotier' : 'lan';
+      const type = isZeroTierInterface(ifaceName) ? 'zerotier' : 'lan';
       const label = type === 'zerotier' ? `ZeroTier 地址 (${ifaceName})` : `LAN 地址 (${ifaceName})`;
       addresses.push({
         type,
@@ -132,11 +157,21 @@ function getShareEndpoints(input) {
   const fallbackPort = appConfig.port;
   const publicHost = appConfig.publicHost || null;
   const publicPort = appConfig.publicPort;
+  const libztState = getLibztState();
+  const embeddedProxyPort = libztState
+    && libztState.enabled
+    && libztState.proxy
+    && libztState.proxy.enabled
+    ? libztState.proxy.listenPort
+    : null;
+
   const sharePort = appConfig.sharePort
+    || embeddedProxyPort
     || publicPort
     || parsedHost.port
     || fallbackPort;
 
+  const collectedAddresses = collectNetworkAddresses();
   const seen = new Set();
   const endpoints = [];
   const pushEndpoint = (type, label, host, ifaceName = null) => {
@@ -163,10 +198,23 @@ function getShareEndpoints(input) {
   }
 
   if (parsedHost.hostname && parsedHost.hostname !== '0.0.0.0' && parsedHost.hostname !== '::') {
-    pushEndpoint('current', '当前访问地址', parsedHost.hostname);
+    const matchedInterface = collectedAddresses.find((item) => item.host === parsedHost.hostname) || null;
+    const currentHostLooksZeroTier = isLikelyZeroTierIPv4(parsedHost.hostname);
+    const embeddedLikelyZeroTierHost = !matchedInterface
+      && embeddedProxyPort
+      && isIPv4Address(parsedHost.hostname);
+    const genericLikelyZeroTierHost = !matchedInterface
+      && currentHostLooksZeroTier;
+    const currentType = matchedInterface
+      ? matchedInterface.type
+      : ((embeddedLikelyZeroTierHost || genericLikelyZeroTierHost) ? 'zerotier' : 'current');
+    const currentLabel = matchedInterface
+      ? `当前访问地址（${matchedInterface.type === 'zerotier' ? 'ZeroTier' : 'LAN'}）`
+      : ((embeddedLikelyZeroTierHost || genericLikelyZeroTierHost) ? '当前访问地址（ZeroTier）' : '当前访问地址');
+    pushEndpoint(currentType, currentLabel, parsedHost.hostname, matchedInterface ? matchedInterface.interface : null);
   }
 
-  collectNetworkAddresses().forEach((item) => {
+  collectedAddresses.forEach((item) => {
     pushEndpoint(item.type, item.label, item.host, item.interface);
   });
 
@@ -175,6 +223,14 @@ function getShareEndpoints(input) {
 
 function getRecommendedEndpoint(endpoints, _context = {}) {
   const list = Array.isArray(endpoints) ? endpoints : [];
+  const libztState = getLibztState();
+  const embeddedOnlineReady = Boolean(
+    libztState
+    && libztState.enabled
+    && libztState.proxy
+    && libztState.proxy.enabled
+  );
+
   if (list.length === 0) {
     return { endpoint: null, reason: '暂无可分享地址' };
   }
@@ -186,6 +242,9 @@ function getRecommendedEndpoint(endpoints, _context = {}) {
 
   const lan = list.find((item) => item.type === 'lan') || null;
   if (lan) {
+    if (embeddedOnlineReady) {
+      return { endpoint: lan, reason: 'ZeroTier（嵌入式）已就绪，当前展示可达地址' };
+    }
     return { endpoint: lan, reason: 'ZeroTier 不可用，回退 LAN 地址' };
   }
 

@@ -50,8 +50,26 @@ if errorlevel 1 (
 
 echo Starting app with embedded libzt...
 if "%APP_PORT_LOCAL%"=="" set "APP_PORT_LOCAL=3000"
+if "%APP_START_MODE%"=="" set "APP_START_MODE=online-preferred"
 set "PORT=%APP_PORT_LOCAL%"
+set "START_BAT_SKIP_PAUSE_ON_ERROR=1"
 call start.bat
+if errorlevel 1 (
+  echo.
+  echo [Embedded Online Error]
+  echo Online initialization failed. Service was stopped as required.
+  echo.
+  echo Please check:
+  echo   - LIBZT_NETWORK_ID is correct
+  echo   - This node is authorized in ZeroTier Central
+  echo   - libzt.dll path is valid: %LIBZT_DLL_PATH%
+  echo   - Network can access ZeroTier
+  echo.
+  echo Fix the issues above, then run start-embedded.bat again.
+  pause
+  endlocal
+  exit /b 1
+)
 
 endlocal
 exit /b 0

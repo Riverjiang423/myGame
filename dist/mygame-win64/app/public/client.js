@@ -507,7 +507,7 @@ async function refreshShareAddresses(roomId, force = false) {
   }
 }
 
-async function loadDefaultRoomShareInfo() {
+async function loadDefaultRoomShareInfo(targetRoomId = '') {
   if (!defaultRoomCodeEl || !defaultShareUrlEl || !defaultShareReasonEl) {
     return;
   }
@@ -521,7 +521,10 @@ async function loadDefaultRoomShareInfo() {
   }
 
   try {
-    const response = await fetch('/api/network-info', {
+    const query = targetRoomId
+      ? `?roomId=${encodeURIComponent(String(targetRoomId).trim().toUpperCase())}`
+      : '';
+    const response = await fetch(`/api/network-info${query}`, {
       cache: 'no-store'
     });
     if (!response.ok) {
@@ -1066,6 +1069,7 @@ socket.on('left_room', () => {
   if (shareAddressListEl) {
     shareAddressListEl.innerHTML = '<div>加入房间后将显示可分享地址。</div>';
   }
+  loadDefaultRoomShareInfo();
   setJoinedLobbyState(false);
   showView('lobby');
   saveSession({ lastRoomId: '' });
@@ -1098,6 +1102,7 @@ socket.on('room_update', (room) => {
   currentSelectedGame = room.selectedGame || null;
   currentPokerBetLimits = room.pokerBetLimits || { minBet: null, maxBet: null };
   roomCodeEl.textContent = room.id;
+  loadDefaultRoomShareInfo(room.id);
   refreshShareAddresses(room.id);
   renderPlayers(players);
   setJoinedLobbyState(true);

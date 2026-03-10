@@ -6,21 +6,45 @@
 
 前后端通信使用 `socket.io`。
 
-## 0. 3 分钟快速上手
+## 0. 先看你属于哪种用户
 
-### 0.1 开发者本地调试
+### 0.1 普通用户
 
-1. 双击 `setup.bat` 安装依赖  
-2. 双击 `start.bat` 启动服务  
-3. 浏览器访问控制台打印的地址（默认 `http://127.0.0.1:3000` 或顺延端口）
+如果你只是想打开游戏、建房、发链接给朋友：
 
-### 0.2 普通用户分发包启动（免预装 Node）
+1. 不要直接运行源码仓库里的脚本。  
+2. 请使用分发包目录 `dist/mygame-win64`。  
+3. 双击 `launch-product.bat`。  
+4. 等浏览器自动打开后，复制页面里的分享链接发给朋友。
 
-1. 先执行一次打包准备：`npm run dist:prepare`  
-2. 进入 `dist/mygame-win64`  
-3. 双击 `launch-product.bat`
+你不需要额外安装 Node.js，也不需要手动执行 `npm` 命令。
 
-### 0.3 发布前最小检查
+### 0.2 房主想通过 ZeroTier 联机
+
+如果你需要让朋友通过 ZeroTier 加入你的房间：
+
+1. 安装 ZeroTier One 客户端。  
+2. 确认你和朋友都已加入同一个 ZeroTier 网络。当前默认网络 ID：`154a350c867ce6c8`。  
+3. 双击 `start-online.bat` 启动。  
+4. 启动后优先把系统给出的推荐分享地址发给朋友。
+
+### 0.3 开发者本地调试
+
+如果你是在这份源码仓库里开发或调试：
+
+1. 双击 `setup.bat` 安装依赖。  
+2. 双击 `start.bat` 启动服务。  
+3. 浏览器访问控制台打印的地址（默认 `http://127.0.0.1:3000` 或顺延端口）。
+
+### 0.4 发布方打包分发
+
+如果你要把软件发给别人使用：
+
+1. 直接双击 `build-dist.bat`，或在源码仓库执行 `npm run dist:prepare`。  
+2. 把生成的 `dist/mygame-win64` 整个目录发给用户。  
+3. 告诉用户只需要双击 `launch-product.bat`。
+
+### 0.5 发布前最小检查
 
 ```bash
 npm run release:check
@@ -287,7 +311,46 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 
 ## 8. 本地运行与联机（当前）
 
-### 8.1 首次安装依赖
+### 8.0 先选正确的启动方式
+
+| 使用路径 | 是否“拉取后直接可用” | 额外前置条件 | 适合人群 |
+| --- | --- | --- | --- |
+| 源码仓库 + `start.bat` | 条件可用 | 需要本机已安装 Node.js / npm（首次会自动装依赖） | 开发者、本地调试 |
+| 源码仓库 + `start-online.bat` | 条件可用 | 需要安装 ZeroTier 客户端；建议管理员权限运行脚本 | 需要外部 ZeroTier 客户端联机的用户 |
+| 源码仓库 + `start-embedded.bat` | 不属于“即拉即用” | 需要 C++ Build Tools（node-gyp 编译）；需 `libzt.dll`；首次需 ZeroTier Central 授权节点 | 进阶用户、开发测试嵌入式联机 |
+| 分发目录 `dist/mygame-win64/launch-product.bat` | 最接近“开箱即用” | 先由发布方执行 `npm run dist:prepare` 产出分发包；用户端无需预装 Node | 普通终端用户 |
+
+说明：
+- GitHub 源码仓库定位是“开发仓库”，不是最终用户一键安装包。
+- 面向普通用户请优先分发 `dist/mygame-win64`，而不是直接让用户拉源码运行。
+
+### 8.1 普通用户实际使用流程
+
+#### 情况 A：你是房主
+
+1. 双击 `dist/mygame-win64/launch-product.bat` 启动。
+2. 等浏览器打开后，输入昵称进入房间。
+3. 复制系统显示的分享链接，发给朋友。
+4. 选择游戏：
+   - 想玩扫雷：点“选择扫雷”
+   - 想玩德州：点“选择德州”
+5. 等其他玩家加入并准备后，点击“开始游戏”。
+
+#### 情况 B：你是被邀请的朋友
+
+1. 打开房主发来的链接。
+2. 输入昵称进入房间。
+3. 等房主选好游戏后，点击“准备”。
+4. 房主开始后即可进入对局。
+
+#### 情况 C：你们使用 ZeroTier 联机
+
+1. 确认所有参与者都安装了 ZeroTier One。
+2. 确认所有参与者都已加入同一个 ZeroTier 网络。
+3. 如果你使用仓库脚本启动，默认网络 ID 是 `154a350c867ce6c8`。
+4. 优先使用页面里推荐的 ZeroTier 分享地址，不要手动猜 IP 和端口。
+
+### 8.2 首次安装依赖
 
 双击：
 - `setup.bat`
@@ -296,7 +359,7 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 - 检查 `node` / `npm`
 - 安装依赖（有 `package-lock.json` 时优先 `npm ci`）
 
-### 8.2 本地一键启动（默认）
+### 8.3 本地一键启动（默认）
 
 双击：
 - `start.bat`
@@ -310,7 +373,7 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 - `APP_START_MODE=local`
 - 不强依赖 libzt，适合本机开发与联调
 
-### 8.3 ZeroTier 客户端联机（外部客户端方案）
+### 8.4 ZeroTier 客户端联机（外部客户端方案）
 
 相关文件：
 - `online.config.bat`
@@ -319,7 +382,8 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 步骤：
 1. 安装 ZeroTier One 客户端
 2. 编辑 `online.config.bat`：
-   - `set ZT_NETWORK_ID=<你的网络ID>`
+   - 默认已写入：`set ZT_NETWORK_ID=154a350c867ce6c8`
+   - 如需切换到你自己的网络，可改成其他网络 ID
 3. 双击 `start-online.bat`
 
 脚本行为：
@@ -327,7 +391,7 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 - 打印 `listnetworks`
 - 调用 `start.bat` 启动服务
 
-### 8.4 嵌入式 libzt 方案（Win x64）
+### 8.5 嵌入式 libzt 方案（Win x64）
 
 相关文件：
 - `binding.gyp`
@@ -350,10 +414,10 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 3. 调用 `start.bat` 启动服务
 
 注意：
-- 主代码已内置默认官方 `networkId`（`LIBZT_NETWORK_ID` 可覆盖），普通路径不再强制手填。
+- 主代码当前内置默认 `networkId=154a350c867ce6c8`（`LIBZT_NETWORK_ID` 可覆盖），普通路径不再强制手填。
 - 若设置 `LIBZT_STRICT=1`，联机初始化失败会阻止启动。
 
-### 8.5 启动模式说明
+### 8.6 启动模式说明
 
 - `APP_START_MODE=local`
   - 仅本地模式，跳过联机初始化
@@ -366,7 +430,7 @@ RELEASE_CHECK_SKIP_DIST=1 npm run release:check
 - `APP_DISTRIBUTION_MODE=1`：产品分发模式（日志更简洁）
 - `AUTO_OPEN_BROWSER=1/0`：启动后是否自动打开页面
 
-### 8.6 分享地址与接口
+### 8.7 分享地址与接口
 
 分享地址可基于以下来源自动推导：
 - ZeroTier 地址

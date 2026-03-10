@@ -21,6 +21,7 @@ HMODULE g_lib = nullptr;
 
 using zts_node_start_fn = int (*)();
 using zts_node_stop_fn = int (*)();
+using zts_init_from_storage_fn = int (*)(const char*);
 using zts_net_join_fn = int (*)(uint64_t);
 using zts_net_transport_is_ready_fn = int (*)(uint64_t);
 using zts_node_get_id_fn = uint64_t (*)();
@@ -36,6 +37,7 @@ using zts_close_fn = int (*)(int);
 
 zts_node_start_fn g_zts_node_start = nullptr;
 zts_node_stop_fn g_zts_node_stop = nullptr;
+zts_init_from_storage_fn g_zts_init_from_storage = nullptr;
 zts_net_join_fn g_zts_net_join = nullptr;
 zts_net_transport_is_ready_fn g_zts_net_transport_is_ready = nullptr;
 zts_node_get_id_fn g_zts_node_get_id = nullptr;
@@ -62,6 +64,7 @@ std::vector<std::string> g_proxy_allow_ips;
 void reset_symbols() {
   g_zts_node_start = nullptr;
   g_zts_node_stop = nullptr;
+  g_zts_init_from_storage = nullptr;
   g_zts_net_join = nullptr;
   g_zts_net_transport_is_ready = nullptr;
   g_zts_node_get_id = nullptr;
@@ -326,6 +329,8 @@ Napi::Value Load(const Napi::CallbackInfo& info) {
 
   g_zts_node_start = reinterpret_cast<zts_node_start_fn>(GetProcAddress(g_lib, "zts_node_start"));
   g_zts_node_stop = reinterpret_cast<zts_node_stop_fn>(GetProcAddress(g_lib, "zts_node_stop"));
+  g_zts_init_from_storage =
+    reinterpret_cast<zts_init_from_storage_fn>(GetProcAddress(g_lib, "zts_init_from_storage"));
   g_zts_net_join = reinterpret_cast<zts_net_join_fn>(GetProcAddress(g_lib, "zts_net_join"));
   g_zts_net_transport_is_ready =
     reinterpret_cast<zts_net_transport_is_ready_fn>(GetProcAddress(g_lib, "zts_net_transport_is_ready"));
@@ -340,7 +345,7 @@ Napi::Value Load(const Napi::CallbackInfo& info) {
   g_zts_send = reinterpret_cast<zts_send_fn>(GetProcAddress(g_lib, "zts_send"));
   g_zts_close = reinterpret_cast<zts_close_fn>(GetProcAddress(g_lib, "zts_close"));
 
-  if (!g_zts_node_start || !g_zts_node_stop || !g_zts_net_join ||
+  if (!g_zts_node_start || !g_zts_node_stop || !g_zts_init_from_storage || !g_zts_net_join ||
       !g_zts_net_transport_is_ready || !g_zts_node_get_id ||
       !g_zts_socket || !g_zts_bind || !g_zts_listen || !g_zts_accept ||
       !g_zts_connect || !g_zts_recv || !g_zts_send || !g_zts_close) {
@@ -395,6 +400,22 @@ Napi::Value NodeStart(const Napi::CallbackInfo& info) {
     return env.Null();
   }
   return Napi::Number::New(env, g_zts_node_start());
+}
+
+Napi::Value InitFromStorage(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  if (!g_zts_init_from_storage) {
+    Napi::Error::New(env, "libzt missing zts_init_from_storage").ThrowAsJavaScriptException();
+    return env.Null();
+  }
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "initFromStorage(path) requires path string")
+      .ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  std::string storage_path = info[0].As<Napi::String>().Utf8Value();
+  return Napi::Number::New(env, g_zts_init_from_storage(storage_path.c_str()));
 }
 
 Napi::Value NodeStop(const Napi::CallbackInfo& info) {
@@ -549,6 +570,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("loaded", Napi::Function::New(env, Loaded));
   exports.Set("load", Napi::Function::New(env, Load));
   exports.Set("unload", Napi::Function::New(env, Unload));
+  exports.Set("initFromStorage", Napi::Function::New(env, InitFromStorage));
   exports.Set("nodeStart", Napi::Function::New(env, NodeStart));
   exports.Set("nodeStop", Napi::Function::New(env, NodeStop));
   exports.Set("netJoin", Napi::Function::New(env, NetJoin));

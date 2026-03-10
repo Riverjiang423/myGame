@@ -2,8 +2,9 @@ const path = require('path');
 const { readStringEnv, readIntEnv, readBoolEnv } = require('./env');
 const { appConfig } = require('./app');
 
-const DEFAULT_NETWORK_ID = '8056c2e21c000001';
+const DEFAULT_NETWORK_ID = '154a350c867ce6c8';
 const rawDllPath = readStringEnv('LIBZT_DLL_PATH', '');
+const rawStoragePath = readStringEnv('LIBZT_STORAGE_PATH', '');
 const allowIpsRaw = readStringEnv('LIBZT_PROXY_ALLOW_IPS', '');
 const rawEnvNetworkId = process.env.LIBZT_NETWORK_ID;
 const envNetworkId = typeof rawEnvNetworkId === 'string' ? rawEnvNetworkId.trim() : '';
@@ -38,6 +39,9 @@ const libztConfig = {
   dllPath: rawDllPath
     ? path.resolve(process.cwd(), rawDllPath)
     : path.resolve(process.cwd(), 'third_party', 'libzt', 'winx64', 'libzt.dll'),
+  storagePath: rawStoragePath
+    ? path.resolve(process.cwd(), rawStoragePath)
+    : path.resolve(process.cwd(), 'data', 'libzt'),
   waitMs: readIntEnv('LIBZT_WAIT_MS', 30000, { min: 1 }),
   proxy: {
     enabled: readBoolEnv('LIBZT_TCP_PROXY_ENABLE', true),
