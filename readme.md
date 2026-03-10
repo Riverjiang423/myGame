@@ -6,6 +6,32 @@
 
 前后端通信使用 `socket.io`。
 
+## 0. 3 分钟快速上手
+
+### 0.1 开发者本地调试
+
+1. 双击 `setup.bat` 安装依赖  
+2. 双击 `start.bat` 启动服务  
+3. 浏览器访问控制台打印的地址（默认 `http://127.0.0.1:3000` 或顺延端口）
+
+### 0.2 普通用户分发包启动（免预装 Node）
+
+1. 先执行一次打包准备：`npm run dist:prepare`  
+2. 进入 `dist/mygame-win64`  
+3. 双击 `launch-product.bat`
+
+### 0.3 发布前最小检查
+
+```bash
+npm run release:check
+```
+
+如需跳过分发目录检查（仅本机代码验收）：
+
+```bash
+RELEASE_CHECK_SKIP_DIST=1 npm run release:check
+```
+
 ---
 
 ## 1. 视图与状态驱动
@@ -259,126 +285,182 @@
 
 ---
 
-## 8. 本地运行与分发
+## 8. 本地运行与联机（当前）
 
-### 8.1 依赖安装（首次）
+### 8.1 首次安装依赖
 
 双击：
 - `setup.bat`
 
 作用：
-- 检查 Node.js / npm
-- 自动执行 `npm install --include=dev`
+- 检查 `node` / `npm`
+- 安装依赖（有 `package-lock.json` 时优先 `npm ci`）
 
-### 8.2 一键启动
+### 8.2 本地一键启动（默认）
 
 双击：
 - `start.bat`
 
 作用：
-- 自动检查环境
-- 必要时自动安装依赖
-- 自动检测端口占用（默认从 `3000` 开始，最多顺延 30 个端口）
+- 自动检查环境与依赖
+- 自动探测端口（默认从 `3000` 开始，最多顺延 30 个）
 - 执行 `npm run dev`
 
-### 8.3 跨网联机（一键）
+当前默认启动模式（未额外设环境变量）：
+- `APP_START_MODE=local`
+- 不强依赖 libzt，适合本机开发与联调
 
-新增文件：
+### 8.3 ZeroTier 客户端联机（外部客户端方案）
+
+相关文件：
 - `online.config.bat`
 - `start-online.bat`
 
-使用步骤：
-1. 安装 ZeroTier One（客户端）
-2. 编辑 `online.config.bat`，填写：
-   - `ZT_NETWORK_ID=<你的网络ID>`
+步骤：
+1. 安装 ZeroTier One 客户端
+2. 编辑 `online.config.bat`：
+   - `set ZT_NETWORK_ID=<你的网络ID>`
 3. 双击 `start-online.bat`
 
-脚本会：
-- 自动执行 `zerotier-cli join <networkId>`
-- 打印当前 ZeroTier 网络列表
-- 调用 `start.bat` 启动本项目
+脚本行为：
+- 执行 `zerotier-cli join <networkId>`
+- 打印 `listnetworks`
+- 调用 `start.bat` 启动服务
 
-说明：
-- 这是基于 ZeroTier 运行时的快速联机方案。
-- 若需“原生 libzt 嵌入（不依赖外部 ZeroTier 客户端）”，需额外接入 libzt SDK/二进制并做 Node 原生绑定。
+### 8.4 嵌入式 libzt 方案（Win x64）
 
-### 8.4 Win x64 原生嵌入 libzt（新增）
-
-新增文件：
+相关文件：
 - `binding.gyp`
 - `native/libztaddon.cc`
-- `src/libzt/index.js`
-- `src/libzt/bootstrap.js`
+- `src/network/libzt/addon.js`
+- `src/network/libzt/runtime.js`
 - `libzt.config.bat`
 - `start-embedded.bat`
 
-准备步骤（Win x64）：
-1. 安装 Visual Studio Build Tools（含 C++ 工具链）
-2. 将 `libzt.dll` 放到：
+准备：
+1. 安装 Visual Studio Build Tools（C++ 工具链）
+2. 放置 `libzt.dll`：
    - `third_party/libzt/winx64/libzt.dll`
-3. 编辑 `libzt.config.bat`：
-   - `LIBZT_NETWORK_ID=<你的网络ID>`
+3. 编辑 `libzt.config.bat`（可选覆盖）
 4. 双击 `start-embedded.bat`
 
-启动脚本会执行：
+`start-embedded.bat` 会：
 1. 编译原生模块：`npm run build:libzt`
-2. 设置 `LIBZT_*` 环境变量
-3. 启动服务（`start.bat` -> `npm run dev`）
+2. 注入 `LIBZT_*` 环境变量
+3. 调用 `start.bat` 启动服务
 
-服务端启动阶段会：
-- 读取 `LIBZT_ENABLE=1`
-- 动态加载 `libzt.dll`
-- 执行 `zts_node_start` / `zts_net_join`
-- 等待网络就绪后再 `server.listen`
-- 启动 libzt TCP 代理（默认开启）：`zt:<LIBZT_PROXY_PORT> -> 127.0.0.1:<PORT>`
-- 进程退出（SIGINT/SIGTERM）时自动执行 libzt 清理：停代理、停节点、卸载 DLL
+注意：
+- 主代码已内置默认官方 `networkId`（`LIBZT_NETWORK_ID` 可覆盖），普通路径不再强制手填。
+- 若设置 `LIBZT_STRICT=1`，联机初始化失败会阻止启动。
 
-相关环境变量：
-- `LIBZT_ENABLE`：是否启用嵌入（`1/true`）
-- `LIBZT_STRICT`：libzt 初始化失败时是否阻止服务启动（`1` 阻止）
-- `LIBZT_NETWORK_ID`：ZeroTier 网络 ID（必填）
-- `LIBZT_DLL_PATH`：`libzt.dll` 路径
-- `LIBZT_WAIT_MS`：网络就绪等待超时（默认 30000ms）
-- `LIBZT_TCP_PROXY_ENABLE`：是否启用 libzt TCP 代理（默认 1）
-- `LIBZT_PROXY_PORT`：libzt 侧监听端口（默认 3000）
-- `LIBZT_PROXY_TARGET_HOST`：代理目标主机（默认 127.0.0.1）
-- `LIBZT_PROXY_MAX_CONNECTIONS`：代理最大并发连接（默认 128）
-- `LIBZT_PROXY_IDLE_TIMEOUT_MS`：代理连接空闲超时（默认 120000）
-- `LIBZT_PROXY_LOG`：代理日志开关（`1` 输出连接日志）
-- `LIBZT_PROXY_ALLOW_IPS`：白名单 IP（逗号分隔，留空表示不限制）
-- `APP_PORT_LOCAL`：Node 本地监听端口（`start-embedded.bat` 会写入 `PORT`）
-- `DISCONNECT_GRACE_MS`：断线保留时长（默认 `45000`）
-- `SOCKET_TRANSPORTS`：Socket.IO 传输顺序（默认 `websocket,polling`）
-- `SOCKET_PING_INTERVAL_MS`：服务端心跳间隔（默认 `20000`）
-- `SOCKET_PING_TIMEOUT_MS`：服务端心跳超时（默认 `60000`）
-- `SOCKET_CONNECT_TIMEOUT_MS`：连接建立超时（默认 `30000`）
-- `SOCKET_MAX_HTTP_BUFFER_BYTES`：单消息大小上限（默认 `1000000`）
+### 8.5 启动模式说明
 
-说明：
-- 当前已完成“原生 SDK 加载 + 入网启动 + libzt TCP 代理桥接”链路。
-- 业务访问路径为：libzt TCP 端口 -> 本地 Node HTTP/WebSocket。
-- 游戏内已增加连接质量提示（自动重连状态 + RTT），用于跨网排障。
-- 加入房间后会自动显示“可分享联机地址”（ZeroTier/LAN/当前访问地址）并支持一键复制（复制内容自动附带 `?room=房间号`）。
-- 分享地址支持“简洁模式”：仅显示推荐地址。
-- 推荐策略已细化：
-  - 房主端默认推荐 ZeroTier 地址（无 ZeroTier 时回退 LAN/当前地址）。
-  - 非房主端默认推荐“与当前访问来源同网段”的地址（便于同网段直连）。
-- 推荐地址旁会显示推荐原因（如“房主优先 ZeroTier”或“同网段匹配”）。
-- 每条分享地址会自动做前端连通性检测并显示可达性（可达/不可达 + 延迟）。
+- `APP_START_MODE=local`
+  - 仅本地模式，跳过联机初始化
+- `APP_START_MODE=online-preferred`
+  - 尝试联机，失败自动回退本地（默认产品化路径）
+- `APP_START_MODE=online-required`
+  - 联机失败直接启动失败
 
-新增可选环境变量（分享地址）：
-- `PUBLIC_PROTOCOL`：分享链接协议（如 `http` / `https`）
-- `PUBLIC_HOST`：固定公网域名/IP（设置后会优先展示）
-- `PUBLIC_PORT`：固定分享端口
-- `SHARE_PORT`：覆盖分享端口（优先级最高）
+可配项：
+- `APP_DISTRIBUTION_MODE=1`：产品分发模式（日志更简洁）
+- `AUTO_OPEN_BROWSER=1/0`：启动后是否自动打开页面
 
-新增接口（联机体验）：
-- `GET /api/network-info?roomId=ABCD`：返回可分享地址列表
-- `GET /api/ping`：返回连通性探测响应（含跨域头）
+### 8.6 分享地址与接口
+
+分享地址可基于以下来源自动推导：
+- ZeroTier 地址
+- LAN 地址
+- 当前访问地址 / 固定公网地址
+
+可选环境变量：
+- `PUBLIC_PROTOCOL`
+- `PUBLIC_HOST`
+- `PUBLIC_PORT`
+- `SHARE_PORT`
+
+接口：
+- `GET /api/network-info?roomId=ABCD`
+  - 返回 endpoints、recommendedEndpoint、recommendedReason、recommendedShareUrl
+- `GET /api/network-info`
+  - 未传 `roomId` 时，使用默认房间信息
+- `GET /api/ping`
+  - 基础连通性探测（含 CORS 头）
 
 ---
 
-## 9. 关键约束汇总
+## 9. 分发（免预装 Node）
+
+### 9.1 生成分发目录
+
+```bash
+npm run dist:prepare
+```
+
+生成目录：
+- `dist/mygame-win64/app`（应用文件）
+- `dist/mygame-win64/runtime`（便携 Node 运行时）
+- `dist/mygame-win64/launch-product.bat`（用户入口）
+
+### 9.2 便携 Node 运行时来源
+
+`dist:prepare` 会按优先级查找运行时来源：
+1. 环境变量 `NODE_RUNTIME_WIN_X64_DIR`
+2. `third_party/node/winx64`
+
+要求存在：
+- `node.exe`
+
+### 9.3 用户启动入口
+
+双击：
+- `dist/mygame-win64/launch-product.bat`
+
+该脚本默认设置：
+- `APP_DISTRIBUTION_MODE=1`
+- `APP_START_MODE=online-preferred`
+- `AUTO_OPEN_BROWSER=1`
+
+---
+
+## 10. 测试与发布前检查
+
+### 10.1 自动化测试
+
+```bash
+npm test
+npm run test:unit
+npm run test:integration
+```
+
+### 10.2 预发布检查
+
+```bash
+npm run preflight
+# 或
+npm run release:check
+```
+
+检查内容：
+- 依赖与关键源码文件
+- 默认配置有效性
+- 自动化测试通过
+- native 产物存在（`libztaddon.node`、`libzt.dll`）
+- 分发目录关键文件存在（含 `runtime/node.exe`）
+
+可选跳过项（CI/分阶段验收）：
+- `RELEASE_CHECK_SKIP_TESTS=1`
+- `RELEASE_CHECK_SKIP_NATIVE=1`
+- `RELEASE_CHECK_SKIP_DIST=1`
+
+### 10.3 手工回归与验收模板
+
+- 手工清单：`docs/manual-regression-checklist.md`
+- 报告模板：`docs/release-acceptance-report-template.md`
+
+---
+
+## 11. 关键约束汇总
 
 - 仅房主可：选游戏、开局、扫雷结算控制、设置德州押注上下限
 - 非房主必须全部准备后才能开局

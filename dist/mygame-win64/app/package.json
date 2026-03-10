@@ -8,7 +8,11 @@
     "install": "node -e \"console.log('skip native build on install; run npm run build:libzt when needed')\"",
     "build:libzt": "node-gyp rebuild",
     "dist:prepare": "node scripts/prepare-distribution.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "preflight": "node scripts/release-check.js",
+    "release:check": "node scripts/release-check.js",
+    "test": "node --test --test-isolation=none \"tests/**/*.test.js\"",
+    "test:unit": "node --test --test-isolation=none \"tests/unit/**/*.test.js\"",
+    "test:integration": "node --test --test-isolation=none \"tests/integration/**/*.test.js\""
   },
   "keywords": [],
   "author": "",

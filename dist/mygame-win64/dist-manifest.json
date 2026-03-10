@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-09T03:24:02.595Z",
+  "generatedAt": "2026-03-10T00:56:23.079Z",
   "entry": "app/index.js",
   "runtimeEntry": "runtime/node.exe",
   "distributionRoot": "dist/mygame-win64",
   "runtime": {
-    "sourceDir": null,
-    "ok": false,
-    "reason": "Node runtime source directory not found"
+    "sourceDir": "C:\\Users\\TR\\Desktop\\cpp\\myGame\\third_party\\node\\winx64",
+    "ok": true,
+    "reason": ""
   },
   "copied": [
     "index.js",
@@ -24,10 +24,9 @@
     "online.config.bat",
     "libzt.config.bat",
     "build/distribution/distribution.config.json",
-    "build/Release/libztaddon.node"
-  ],
-  "missing": [
+    "build/Release/libztaddon.node",
     "third_party/libzt/winx64/libzt.dll",
     "runtime/node.exe"
-  ]
+  ],
+  "missing": []
 }

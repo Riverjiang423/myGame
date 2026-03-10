@@ -20,7 +20,7 @@ const defaultAutoOpenBrowser = distributionMode ? true : false;
 
 const appConfig = {
   distributionMode,
-  port: readIntEnv('PORT', 3000, { min: 1 }),
+  port: readIntEnv('PORT', 3000, { min: 0 }),
   host: readStringEnv('HOST', '0.0.0.0'),
   startMode: normalizeStartMode(
     readStringEnv('APP_START_MODE', hasStartModeOverride ? 'online-preferred' : defaultStartMode)

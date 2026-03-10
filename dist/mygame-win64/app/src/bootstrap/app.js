@@ -378,7 +378,9 @@ function autoOpenBrowserOnce(url) {
   }
 }
 
-async function gracefulShutdown(signal) {
+async function gracefulShutdown(signal, options = {}) {
+  const exitProcess = options.exitProcess !== false;
+
   if (isShuttingDown) {
     return;
   }
@@ -401,7 +403,9 @@ async function gracefulShutdown(signal) {
     logger.warn(`libzt shutdown warning: ${error.message}`);
   }
 
-  process.exit(0);
+  if (exitProcess) {
+    process.exit(0);
+  }
 }
 
 async function startServer() {
@@ -463,35 +467,51 @@ async function startServer() {
     process.exit(1);
   });
 
-  server.listen(PORT, HOST, () => {
-    const defaultRoomResult = roomStore.getOrCreateDefaultRoom(() => new Room());
-    const shareInfo = getDefaultRoomShareInfo({
-      roomId: defaultRoomResult.room.id,
-      protocol: appConfig.publicProtocol || 'http',
-      hostHeader: `${HOST}:${PORT}`
+  await new Promise((resolve) => {
+    server.listen(PORT, HOST, () => {
+      const defaultRoomResult = roomStore.getOrCreateDefaultRoom(() => new Room());
+      const shareInfo = getDefaultRoomShareInfo({
+        roomId: defaultRoomResult.room.id,
+        protocol: appConfig.publicProtocol || 'http',
+        hostHeader: `${HOST}:${PORT}`
+      });
+      logger.status(`Server listening on http://${HOST}:${PORT}`);
+      logger.status(
+        `默认房间已就绪：${defaultRoomResult.room.id}${defaultRoomResult.created ? '（新建）' : '（复用）'}`
+      );
+      if (shareInfo.recommendedShareUrl) {
+        logger.status(`推荐分享链接：${shareInfo.recommendedShareUrl}（${shareInfo.recommendedReason}）`);
+      }
+      const autoOpenUrl = buildAutoOpenUrl(defaultRoomResult.room.id);
+      autoOpenBrowserOnce(autoOpenUrl);
+      resolve();
     });
-    logger.status(`Server listening on http://${HOST}:${PORT}`);
-    logger.status(
-      `默认房间已就绪：${defaultRoomResult.room.id}${defaultRoomResult.created ? '（新建）' : '（复用）'}`
-    );
-    if (shareInfo.recommendedShareUrl) {
-      logger.status(`推荐分享链接：${shareInfo.recommendedShareUrl}（${shareInfo.recommendedReason}）`);
-    }
-    const autoOpenUrl = buildAutoOpenUrl(defaultRoomResult.room.id);
-    autoOpenBrowserOnce(autoOpenUrl);
   });
 }
 
-async function startApp() {
-  process.on('SIGINT', () => {
-    gracefulShutdown('SIGINT');
-  });
+async function startApp(options = {}) {
+  const registerSignalHandlers = options.registerSignalHandlers !== false;
 
-  process.on('SIGTERM', () => {
-    gracefulShutdown('SIGTERM');
-  });
+  if (registerSignalHandlers) {
+    process.on('SIGINT', () => {
+      gracefulShutdown('SIGINT');
+    });
+
+    process.on('SIGTERM', () => {
+      gracefulShutdown('SIGTERM');
+    });
+  }
 
   await startServer();
+
+  return {
+    app,
+    server,
+    io,
+    rooms,
+    getAddress: () => server.address(),
+    close: () => gracefulShutdown('test_close', { exitProcess: false })
+  };
 }
 
 module.exports = {
