@@ -149,6 +149,7 @@ function getShareEndpoints(input) {
     || parsedHost.port
     || fallbackPort;
 
+  const collectedAddresses = collectNetworkAddresses();
   const seen = new Set();
   const endpoints = [];
   const pushEndpoint = (type, label, host, ifaceName = null) => {
@@ -175,10 +176,15 @@ function getShareEndpoints(input) {
   }
 
   if (parsedHost.hostname && parsedHost.hostname !== '0.0.0.0' && parsedHost.hostname !== '::') {
-    pushEndpoint('current', '当前访问地址', parsedHost.hostname);
+    const matchedInterface = collectedAddresses.find((item) => item.host === parsedHost.hostname) || null;
+    const currentType = matchedInterface ? matchedInterface.type : 'current';
+    const currentLabel = matchedInterface
+      ? `当前访问地址（${matchedInterface.type === 'zerotier' ? 'ZeroTier' : 'LAN'}）`
+      : '当前访问地址';
+    pushEndpoint(currentType, currentLabel, parsedHost.hostname, matchedInterface ? matchedInterface.interface : null);
   }
 
-  collectNetworkAddresses().forEach((item) => {
+  collectedAddresses.forEach((item) => {
     pushEndpoint(item.type, item.label, item.host, item.interface);
   });
 
