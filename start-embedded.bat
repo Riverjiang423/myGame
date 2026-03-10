@@ -50,6 +50,7 @@ if errorlevel 1 (
 
 echo Starting app with embedded libzt...
 if "%APP_PORT_LOCAL%"=="" set "APP_PORT_LOCAL=3000"
+if "%APP_START_MODE%"=="" set "APP_START_MODE=online-preferred"
 set "PORT=%APP_PORT_LOCAL%"
 call start.bat
 
