@@ -1,5 +1,6 @@
 const os = require('os');
 const { appConfig } = require('../../config/app');
+const { getLibztState } = require('../libzt/runtime');
 
 function toPositiveInt(value, fallback) {
   const n = Number(value);
@@ -76,13 +77,15 @@ function buildRoomShareUrl(baseUrl, roomId) {
 function collectNetworkAddresses() {
   const addresses = [];
   const interfaces = os.networkInterfaces();
+  const isZeroTierInterface = (ifaceName) => /^zt/i.test(ifaceName) || /zerotier/i.test(ifaceName);
+
   Object.keys(interfaces).forEach((ifaceName) => {
     const ifaceList = interfaces[ifaceName] || [];
     ifaceList.forEach((iface) => {
       if (!iface || iface.internal || iface.family !== 'IPv4') {
         return;
       }
-      const type = /^zt/i.test(ifaceName) ? 'zerotier' : 'lan';
+      const type = isZeroTierInterface(ifaceName) ? 'zerotier' : 'lan';
       const label = type === 'zerotier' ? `ZeroTier 地址 (${ifaceName})` : `LAN 地址 (${ifaceName})`;
       addresses.push({
         type,
@@ -132,7 +135,16 @@ function getShareEndpoints(input) {
   const fallbackPort = appConfig.port;
   const publicHost = appConfig.publicHost || null;
   const publicPort = appConfig.publicPort;
+  const libztState = getLibztState();
+  const embeddedProxyPort = libztState
+    && libztState.enabled
+    && libztState.proxy
+    && libztState.proxy.enabled
+    ? libztState.proxy.listenPort
+    : null;
+
   const sharePort = appConfig.sharePort
+    || embeddedProxyPort
     || publicPort
     || parsedHost.port
     || fallbackPort;
@@ -175,6 +187,14 @@ function getShareEndpoints(input) {
 
 function getRecommendedEndpoint(endpoints, _context = {}) {
   const list = Array.isArray(endpoints) ? endpoints : [];
+  const libztState = getLibztState();
+  const embeddedOnlineReady = Boolean(
+    libztState
+    && libztState.enabled
+    && libztState.proxy
+    && libztState.proxy.enabled
+  );
+
   if (list.length === 0) {
     return { endpoint: null, reason: '暂无可分享地址' };
   }
@@ -186,6 +206,9 @@ function getRecommendedEndpoint(endpoints, _context = {}) {
 
   const lan = list.find((item) => item.type === 'lan') || null;
   if (lan) {
+    if (embeddedOnlineReady) {
+      return { endpoint: lan, reason: 'ZeroTier（嵌入式）已就绪，当前展示可达地址' };
+    }
     return { endpoint: lan, reason: 'ZeroTier 不可用，回退 LAN 地址' };
   }
 
