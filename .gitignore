@@ -1,0 +1,15 @@
+# Runtime/generated directories
+data/
+diagnostics/
+
+# Node-gyp / native build outputs
+build/**
+!build/distribution/
+!build/distribution/distribution.config.json
+
+# Distribution artifacts
+dist/
+
+# Logs
+*.log
+npm-debug.log*
